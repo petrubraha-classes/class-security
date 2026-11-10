@@ -8,6 +8,9 @@
 # Can Alice access and modify the file created by Bob (and the other way around)?
 # Yes.
 
+# Resolve this script's own directory so sourcing works from anywhere.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # ---------------------------------------------------------------------
 # Settings
 # ---------------------------------------------------------------------
@@ -22,32 +25,14 @@ PASSWORD_ALICE="Alice-Lab-123"
 PASSWORD_BOB="Bob-Lab-123"
 
 # ---------------------------------------------------------------------
-# Helper functions
+# Shared helpers and tests
 # ---------------------------------------------------------------------
+source "$SCRIPT_DIR/lib/common.sh"
+source "$SCRIPT_DIR/tests/ex01_tests.sh"
 
-# Print a visible section title.
-print_title() {
-    echo
-    echo "=============================================================="
-    echo "$1"
-    echo "=============================================================="
-}
-
-require_root() {
-    if [ "$(id -u)" -ne 0 ]; then
-        echo "ERROR: run this script as root, for example: sudo ./ex02.sh"
-        exit 1
-    fi
-}
-
-# Run a command as another user. "runuser" starts a new process that
-# belongs to that user, with that user's current groups from /etc/group.
-#   $1 = user name, the rest = the command and its arguments
-run_as_user() {
-    local user_name="$1"
-    shift
-    runuser -u "$user_name" -- "$@"
-}
+# ---------------------------------------------------------------------
+# Exercise-specific functions
+# ---------------------------------------------------------------------
 
 cleanup() {
     print_title "Cleanup: removing users, group and shared directory"
@@ -139,49 +124,6 @@ create_shared_directory() {
     echo "Result:"
     ls -ld "$SHARED_DIR"
     echo "(drwxrws--- means: group IS-Lab can read/write/enter, 's' = setgid is active)"
-}
-
-test_collaboration() {
-    print_title "Step 4: test the collaboration mode"
-
-    # --- 4a. Alice logs in, goes to the shared directory, creates her file
-    echo "--- Alice: cd $SHARED_DIR, create Alice-file.txt, grant group rw"
-    run_as_user "$USER_ALICE" bash -c "
-        cd $SHARED_DIR
-        echo 'Created by Alice.' > Alice-file.txt
-        chmod g+rw Alice-file.txt
-    "
-
-    # --- 4b. Bob logs in, goes to the shared directory, creates his file
-    echo "--- Bob: cd $SHARED_DIR, create Bob-file.txt, grant group rw"
-    run_as_user "$USER_BOB" bash -c "
-        cd $SHARED_DIR
-        echo 'Created by Bob.' > Bob-file.txt
-        chmod g+rw Bob-file.txt
-    "
-
-    echo
-    echo "Files now in $SHARED_DIR (the group must be $GROUP_NAME for both):"
-    ls -l "$SHARED_DIR"
-
-    # --- 4c. Bob reads and modifies Alice's file
-    echo
-    echo "--- Bob modifies Alice's file (appends a line) and reads it back"
-    run_as_user "$USER_BOB" bash -c "
-        echo 'Line appended by Bob.' >> $SHARED_DIR/Alice-file.txt
-        cat $SHARED_DIR/Alice-file.txt
-    "
-
-    # --- 4d. Alice reads and modifies Bob's file
-    echo
-    echo "--- Alice modifies Bob's file (appends a line) and reads it back"
-    run_as_user "$USER_ALICE" bash -c "
-        echo 'Line appended by Alice.' >> $SHARED_DIR/Bob-file.txt
-        cat $SHARED_DIR/Bob-file.txt
-    "
-
-    echo
-    echo "RESULT: both users could read and modify the other user's file."
 }
 
 # ---------------------------------------------------------------------

@@ -8,6 +8,9 @@
 # Can Carl access and modify the files created by Alice and Bob?
 # Yes, through POSIX ACLs: IS-Instructor gets rwx on the directory, Carl NOT being a member of IS-Lab.
 
+# Resolve this script's own directory so sourcing works from anywhere.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # ---------------------------------------------------------------------
 # Settings
 # ---------------------------------------------------------------------
@@ -21,25 +24,16 @@ USER_CARL="carl"
 PASSWORD_CARL="Carl-Lab-123"
 
 # ---------------------------------------------------------------------
-# Helper functions
+# Shared helpers and tests
+# ---------------------------------------------------------------------
+source "$SCRIPT_DIR/lib/common.sh"
+source "$SCRIPT_DIR/tests/ex02_tests.sh"
+
+# ---------------------------------------------------------------------
+# Exercise-specific functions
 # ---------------------------------------------------------------------
 
-# Print a visible section title.
-print_title() {
-    echo
-    echo "=============================================================="
-    echo "$1"
-    echo "=============================================================="
-}
-
-require_root() {
-    if [ "$(id -u)" -ne 0 ]; then
-        echo "ERROR: run this script as root, for example: sudo ./ex03.sh"
-        exit 1
-    fi
-}
-
-# The shared directory is created by ex02.sh, so it must exist already.
+# The shared directory is created by ex01.sh, so it must exist already.
 require_shared_directory() {
     if [ ! -d "$SHARED_DIR" ]; then
         echo "ERROR: $SHARED_DIR does not exist. Run sudo ./ex02.sh first."
@@ -53,15 +47,6 @@ require_acl_tools() {
         echo "setfacl not found, installing the package acl."
         apt-get install -y acl
     fi
-}
-
-# Run a command as another user. "runuser" starts a new process that
-# belongs to that user, with that user's current groups from /etc/group.
-#   $1 = user name, the rest = the command and its arguments
-run_as_user() {
-    local user_name="$1"
-    shift
-    runuser -u "$user_name" -- "$@"
 }
 
 cleanup() {
@@ -151,67 +136,6 @@ set_acl_permissions() {
 
     echo "Result:"
     getfacl "$SHARED_DIR"
-}
-
-test_instructor_access() {
-    print_title "Step 4: test the access of $USER_CARL"
-
-    # The files of Alice and Bob must exist (created by ex02.sh).
-    # If they are missing (for example after a manual cleanup), create them.
-    if [ ! -f "$SHARED_DIR/Alice-file.txt" ]; then
-        run_as_user alice bash -c "
-            cd $SHARED_DIR
-            echo 'Created by Alice.' > Alice-file.txt
-            chmod g+rw Alice-file.txt
-        "
-    fi
-    if [ ! -f "$SHARED_DIR/Bob-file.txt" ]; then
-        run_as_user bob bash -c "
-            cd $SHARED_DIR
-            echo 'Created by Bob.' > Bob-file.txt
-            chmod g+rw Bob-file.txt
-        "
-    fi
-
-    # --- 4a. Carl goes to the shared directory and lists it
-    echo "--- Carl: cd $SHARED_DIR and list the files"
-    run_as_user "$USER_CARL" bash -c "
-        cd $SHARED_DIR
-        pwd
-        ls -l
-    "
-
-    # --- 4b. Carl modifies Alice's file
-    echo
-    echo "--- Carl modifies Alice's file (appends a line) and reads it back"
-    run_as_user "$USER_CARL" bash -c "
-        echo 'Correction added by Carl.' >> $SHARED_DIR/Alice-file.txt
-        cat $SHARED_DIR/Alice-file.txt
-    "
-
-    # --- 4c. Carl modifies Bob's file
-    echo
-    echo "--- Carl modifies Bob's file (appends a line) and reads it back"
-    run_as_user "$USER_CARL" bash -c "
-        echo 'Correction added by Carl.' >> $SHARED_DIR/Bob-file.txt
-        cat $SHARED_DIR/Bob-file.txt
-    "
-
-    # --- 4d. A file created AFTER the ACL was set must also be accessible
-    #         (this proves the default ACL works).
-    echo
-    echo "--- Alice creates a NEW file; Carl must be able to modify it"
-    run_as_user alice bash -c "
-        cd $SHARED_DIR
-        echo 'New file by Alice.' > Alice-new-file.txt
-    "
-    run_as_user "$USER_CARL" bash -c "
-        echo 'Correction added by Carl.' >> $SHARED_DIR/Alice-new-file.txt
-        cat $SHARED_DIR/Alice-new-file.txt
-    "
-
-    echo
-    echo "RESULT: carl could access and modify the files created by Alice and Bob."
 }
 
 # ---------------------------------------------------------------------
