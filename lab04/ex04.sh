@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # choose a file
 echo "salut, ce mai faci?" > message.txt
 # generate a message authentication code, and create an authenticated encryption of it
