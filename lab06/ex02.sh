@@ -8,9 +8,6 @@
 # Can Carl access and modify the files created by Alice and Bob?
 # Yes, through POSIX ACLs: IS-Instructor gets rwx on the directory, Carl NOT being a member of IS-Lab.
 
-# Resolve this script's own directory so sourcing works from anywhere.
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
 # ---------------------------------------------------------------------
 # Settings
 # ---------------------------------------------------------------------
@@ -24,22 +21,8 @@ USER_CARL="carl"
 PASSWORD_CARL="Carl-Lab-123"
 
 # ---------------------------------------------------------------------
-# Shared helpers and tests
-# ---------------------------------------------------------------------
-source "$SCRIPT_DIR/lib/common.sh"
-source "$SCRIPT_DIR/tests/ex02_tests.sh"
-
-# ---------------------------------------------------------------------
 # Exercise-specific functions
 # ---------------------------------------------------------------------
-
-# The shared directory is created by ex01.sh, so it must exist already.
-require_shared_directory() {
-    if [ ! -d "$SHARED_DIR" ]; then
-        echo "ERROR: $SHARED_DIR does not exist. Run sudo ./ex02.sh first."
-        exit 1
-    fi
-}
 
 # setfacl and getfacl come from the package "acl".
 require_acl_tools() {
@@ -76,7 +59,7 @@ cleanup() {
 }
 
 create_group() {
-    print_title "Step 1: create the group $GROUP_INSTRUCTORS"
+    print_title "Create the group $GROUP_INSTRUCTORS"
 
     if getent group "$GROUP_INSTRUCTORS" > /dev/null 2>&1; then
         echo "Group $GROUP_INSTRUCTORS already exists, nothing to do."
@@ -87,7 +70,7 @@ create_group() {
 }
 
 create_user() {
-    print_title "Step 2: create user $USER_CARL (member of $GROUP_INSTRUCTORS only)"
+    print_title "Create user $USER_CARL (member of $GROUP_INSTRUCTORS only)"
 
     if id "$USER_CARL" > /dev/null 2>&1; then
         echo "User $USER_CARL already exists, only adding it to $GROUP_INSTRUCTORS."
@@ -117,7 +100,7 @@ create_user() {
 }
 
 set_acl_permissions() {
-    print_title "Step 3: grant $GROUP_INSTRUCTORS access to $SHARED_DIR with ACLs"
+    print_title "Grant $GROUP_INSTRUCTORS access to $SHARED_DIR with ACLs"
 
     # The plain permissions (owner, group, others) have only ONE group slot,
     # and it is already used by IS-Lab. An ACL adds a named group entry
@@ -142,6 +125,12 @@ set_acl_permissions() {
 # Main program
 # ---------------------------------------------------------------------
 set -e # stop the script if any command fails
+
+# Resolve this script's own directory so sourcing works from anywhere.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/common.sh"
+source "$SCRIPT_DIR/tests/ex02_tests.sh"
+
 require_root
 
 if [ "${1:-}" = "cleanup" ]; then

@@ -1,19 +1,11 @@
 #!/bin/bash
 #
 # Shared helper functions for the lab06 exercises.
-# Source this file from a script, for example:
-#   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-#   source "$SCRIPT_DIR/lib/common.sh"
-#
-# These are the generic helpers common to all exercises. Exercise-specific
-# settings and functions (create_group, create_user, cleanup, tests, ...)
-# stay in their own scripts.
 
 # ---------------------------------------------------------------------
 # Helper functions
 # ---------------------------------------------------------------------
 
-# Print a visible section title.
 print_title() {
     echo
     echo "=============================================================="
@@ -21,10 +13,16 @@ print_title() {
     echo "=============================================================="
 }
 
-# Make sure the script is running as root.
 require_root() {
     if [ "$(id -u)" -ne 0 ]; then
         echo "ERROR: run this script as root, for example: sudo $0"
+        exit 1
+    fi
+}
+
+require_shared_directory() {
+    if [ ! -d "$SHARED_DIR" ]; then
+        echo "ERROR: $SHARED_DIR does not exist. Create it first."
         exit 1
     fi
 }

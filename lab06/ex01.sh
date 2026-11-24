@@ -8,9 +8,6 @@
 # Can Alice access and modify the file created by Bob (and the other way around)?
 # Yes.
 
-# Resolve this script's own directory so sourcing works from anywhere.
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
 # ---------------------------------------------------------------------
 # Settings
 # ---------------------------------------------------------------------
@@ -23,12 +20,6 @@ USER_BOB="bob"
 # (for example: su - alice). Do not reuse these on a real system.
 PASSWORD_ALICE="Alice-Lab-123"
 PASSWORD_BOB="Bob-Lab-123"
-
-# ---------------------------------------------------------------------
-# Shared helpers and tests
-# ---------------------------------------------------------------------
-source "$SCRIPT_DIR/lib/common.sh"
-source "$SCRIPT_DIR/tests/ex01_tests.sh"
 
 # ---------------------------------------------------------------------
 # Exercise-specific functions
@@ -61,7 +52,7 @@ cleanup() {
 }
 
 create_group() {
-    print_title "Step 1: create the group $GROUP_NAME"
+    print_title "Create the group $GROUP_NAME"
 
     if getent group "$GROUP_NAME" > /dev/null 2>&1; then
         echo "Group $GROUP_NAME already exists, nothing to do."
@@ -92,7 +83,7 @@ create_user() {
 }
 
 create_users() {
-    print_title "Step 2: create users $USER_ALICE and $USER_BOB (members of $GROUP_NAME)"
+    print_title "Create users $USER_ALICE and $USER_BOB (members of $GROUP_NAME)"
 
     create_user "$USER_ALICE" "$PASSWORD_ALICE"
     create_user "$USER_BOB" "$PASSWORD_BOB"
@@ -106,7 +97,7 @@ create_users() {
 }
 
 create_shared_directory() {
-    print_title "Step 3: create $SHARED_DIR with group $GROUP_NAME, setgid and group write"
+    print_title "Create $SHARED_DIR with group $GROUP_NAME, setgid and group write"
 
     # Create the directory (no error if it already exists).
     mkdir -p "$SHARED_DIR"
@@ -130,6 +121,12 @@ create_shared_directory() {
 # Main program
 # ---------------------------------------------------------------------
 set -e # stop the script if any command fails (tests handle expected failures explicitly)
+
+# Resolve this script's own directory so sourcing works from anywhere.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/common.sh"
+source "$SCRIPT_DIR/tests/ex01_tests.sh"
+
 require_root
 
 if [ "${1:-}" = "cleanup" ]; then
