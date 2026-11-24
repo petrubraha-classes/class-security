@@ -1,9 +1,9 @@
 #!/bin/bash
 #
 # Usage:
-# - chmod +x ex02.sh
-# - sudo ./ex02.sh            -> creates everything and runs the tests
-# - sudo ./ex02.sh cleanup    -> removes everything this script created
+# - chmod +x ex01.sh
+# - sudo ./ex01.sh            -> creates everything and runs the tests
+# - sudo ./ex01.sh cleanup    -> removes everything this script created
 #
 # Can Alice access and modify the file created by Bob (and the other way around)?
 # Yes.
@@ -22,32 +22,8 @@ PASSWORD_ALICE="Alice-Lab-123"
 PASSWORD_BOB="Bob-Lab-123"
 
 # ---------------------------------------------------------------------
-# Helper functions
+# Exercise-specific functions
 # ---------------------------------------------------------------------
-
-# Print a visible section title.
-print_title() {
-    echo
-    echo "=============================================================="
-    echo "$1"
-    echo "=============================================================="
-}
-
-require_root() {
-    if [ "$(id -u)" -ne 0 ]; then
-        echo "ERROR: run this script as root, for example: sudo ./ex02.sh"
-        exit 1
-    fi
-}
-
-# Run a command as another user. "runuser" starts a new process that
-# belongs to that user, with that user's current groups from /etc/group.
-#   $1 = user name, the rest = the command and its arguments
-run_as_user() {
-    local user_name="$1"
-    shift
-    runuser -u "$user_name" -- "$@"
-}
 
 cleanup() {
     print_title "Cleanup: removing users, group and shared directory"
@@ -76,7 +52,7 @@ cleanup() {
 }
 
 create_group() {
-    print_title "Step 1: create the group $GROUP_NAME"
+    print_title "Create the group $GROUP_NAME"
 
     if getent group "$GROUP_NAME" > /dev/null 2>&1; then
         echo "Group $GROUP_NAME already exists, nothing to do."
@@ -107,7 +83,7 @@ create_user() {
 }
 
 create_users() {
-    print_title "Step 2: create users $USER_ALICE and $USER_BOB (members of $GROUP_NAME)"
+    print_title "Create users $USER_ALICE and $USER_BOB (members of $GROUP_NAME)"
 
     create_user "$USER_ALICE" "$PASSWORD_ALICE"
     create_user "$USER_BOB" "$PASSWORD_BOB"
@@ -121,7 +97,7 @@ create_users() {
 }
 
 create_shared_directory() {
-    print_title "Step 3: create $SHARED_DIR with group $GROUP_NAME, setgid and group write"
+    print_title "Create $SHARED_DIR with group $GROUP_NAME, setgid and group write"
 
     # Create the directory (no error if it already exists).
     mkdir -p "$SHARED_DIR"
@@ -141,53 +117,16 @@ create_shared_directory() {
     echo "(drwxrws--- means: group IS-Lab can read/write/enter, 's' = setgid is active)"
 }
 
-test_collaboration() {
-    print_title "Step 4: test the collaboration mode"
-
-    # --- 4a. Alice logs in, goes to the shared directory, creates her file
-    echo "--- Alice: cd $SHARED_DIR, create Alice-file.txt, grant group rw"
-    run_as_user "$USER_ALICE" bash -c "
-        cd $SHARED_DIR
-        echo 'Created by Alice.' > Alice-file.txt
-        chmod g+rw Alice-file.txt
-    "
-
-    # --- 4b. Bob logs in, goes to the shared directory, creates his file
-    echo "--- Bob: cd $SHARED_DIR, create Bob-file.txt, grant group rw"
-    run_as_user "$USER_BOB" bash -c "
-        cd $SHARED_DIR
-        echo 'Created by Bob.' > Bob-file.txt
-        chmod g+rw Bob-file.txt
-    "
-
-    echo
-    echo "Files now in $SHARED_DIR (the group must be $GROUP_NAME for both):"
-    ls -l "$SHARED_DIR"
-
-    # --- 4c. Bob reads and modifies Alice's file
-    echo
-    echo "--- Bob modifies Alice's file (appends a line) and reads it back"
-    run_as_user "$USER_BOB" bash -c "
-        echo 'Line appended by Bob.' >> $SHARED_DIR/Alice-file.txt
-        cat $SHARED_DIR/Alice-file.txt
-    "
-
-    # --- 4d. Alice reads and modifies Bob's file
-    echo
-    echo "--- Alice modifies Bob's file (appends a line) and reads it back"
-    run_as_user "$USER_ALICE" bash -c "
-        echo 'Line appended by Alice.' >> $SHARED_DIR/Bob-file.txt
-        cat $SHARED_DIR/Bob-file.txt
-    "
-
-    echo
-    echo "RESULT: both users could read and modify the other user's file."
-}
-
 # ---------------------------------------------------------------------
 # Main program
 # ---------------------------------------------------------------------
 set -e # stop the script if any command fails (tests handle expected failures explicitly)
+
+# Resolve this script's own directory so sourcing works from anywhere.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/common.sh"
+source "$SCRIPT_DIR/tests/ex01_tests.sh"
+
 require_root
 
 if [ "${1:-}" = "cleanup" ]; then
@@ -202,4 +141,4 @@ test_collaboration
 
 print_title "Done"
 echo "To try it by hand:  su - $USER_ALICE   (password: $PASSWORD_ALICE)"
-echo "To remove it all:   sudo ./ex02.sh cleanup"
+echo "To remove it all:   sudo $0 cleanup"

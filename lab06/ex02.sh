@@ -1,9 +1,9 @@
 #!/bin/bash
 #
-# Usage (run ex02.sh first, it creates alice, bob and /home/IS-Lab):
-# - chmod +x ex03.sh
-# - sudo ./ex03.sh            -> creates everything and runs the tests
-# - sudo ./ex03.sh cleanup    -> removes everything this script created
+# Usage (run ex01.sh first, it creates alice, bob and /home/IS-Lab):
+# - chmod +x ex02.sh
+# - sudo ./ex02.sh            -> creates everything and runs the tests
+# - sudo ./ex02.sh cleanup    -> removes everything this script created
 #
 # Can Carl access and modify the files created by Alice and Bob?
 # Yes, through POSIX ACLs: IS-Instructor gets rwx on the directory, Carl NOT being a member of IS-Lab.
@@ -21,31 +21,8 @@ USER_CARL="carl"
 PASSWORD_CARL="Carl-Lab-123"
 
 # ---------------------------------------------------------------------
-# Helper functions
+# Exercise-specific functions
 # ---------------------------------------------------------------------
-
-# Print a visible section title.
-print_title() {
-    echo
-    echo "=============================================================="
-    echo "$1"
-    echo "=============================================================="
-}
-
-require_root() {
-    if [ "$(id -u)" -ne 0 ]; then
-        echo "ERROR: run this script as root, for example: sudo ./ex03.sh"
-        exit 1
-    fi
-}
-
-# The shared directory is created by ex02.sh, so it must exist already.
-require_shared_directory() {
-    if [ ! -d "$SHARED_DIR" ]; then
-        echo "ERROR: $SHARED_DIR does not exist. Run sudo ./ex02.sh first."
-        exit 1
-    fi
-}
 
 # setfacl and getfacl come from the package "acl".
 require_acl_tools() {
@@ -53,15 +30,6 @@ require_acl_tools() {
         echo "setfacl not found, installing the package acl."
         apt-get install -y acl
     fi
-}
-
-# Run a command as another user. "runuser" starts a new process that
-# belongs to that user, with that user's current groups from /etc/group.
-#   $1 = user name, the rest = the command and its arguments
-run_as_user() {
-    local user_name="$1"
-    shift
-    runuser -u "$user_name" -- "$@"
 }
 
 cleanup() {
@@ -91,7 +59,7 @@ cleanup() {
 }
 
 create_group() {
-    print_title "Step 1: create the group $GROUP_INSTRUCTORS"
+    print_title "Create the group $GROUP_INSTRUCTORS"
 
     if getent group "$GROUP_INSTRUCTORS" > /dev/null 2>&1; then
         echo "Group $GROUP_INSTRUCTORS already exists, nothing to do."
@@ -102,7 +70,7 @@ create_group() {
 }
 
 create_user() {
-    print_title "Step 2: create user $USER_CARL (member of $GROUP_INSTRUCTORS only)"
+    print_title "Create user $USER_CARL (member of $GROUP_INSTRUCTORS only)"
 
     if id "$USER_CARL" > /dev/null 2>&1; then
         echo "User $USER_CARL already exists, only adding it to $GROUP_INSTRUCTORS."
@@ -132,7 +100,7 @@ create_user() {
 }
 
 set_acl_permissions() {
-    print_title "Step 3: grant $GROUP_INSTRUCTORS access to $SHARED_DIR with ACLs"
+    print_title "Grant $GROUP_INSTRUCTORS access to $SHARED_DIR with ACLs"
 
     # The plain permissions (owner, group, others) have only ONE group slot,
     # and it is already used by IS-Lab. An ACL adds a named group entry
@@ -153,71 +121,16 @@ set_acl_permissions() {
     getfacl "$SHARED_DIR"
 }
 
-test_instructor_access() {
-    print_title "Step 4: test the access of $USER_CARL"
-
-    # The files of Alice and Bob must exist (created by ex02.sh).
-    # If they are missing (for example after a manual cleanup), create them.
-    if [ ! -f "$SHARED_DIR/Alice-file.txt" ]; then
-        run_as_user alice bash -c "
-            cd $SHARED_DIR
-            echo 'Created by Alice.' > Alice-file.txt
-            chmod g+rw Alice-file.txt
-        "
-    fi
-    if [ ! -f "$SHARED_DIR/Bob-file.txt" ]; then
-        run_as_user bob bash -c "
-            cd $SHARED_DIR
-            echo 'Created by Bob.' > Bob-file.txt
-            chmod g+rw Bob-file.txt
-        "
-    fi
-
-    # --- 4a. Carl goes to the shared directory and lists it
-    echo "--- Carl: cd $SHARED_DIR and list the files"
-    run_as_user "$USER_CARL" bash -c "
-        cd $SHARED_DIR
-        pwd
-        ls -l
-    "
-
-    # --- 4b. Carl modifies Alice's file
-    echo
-    echo "--- Carl modifies Alice's file (appends a line) and reads it back"
-    run_as_user "$USER_CARL" bash -c "
-        echo 'Correction added by Carl.' >> $SHARED_DIR/Alice-file.txt
-        cat $SHARED_DIR/Alice-file.txt
-    "
-
-    # --- 4c. Carl modifies Bob's file
-    echo
-    echo "--- Carl modifies Bob's file (appends a line) and reads it back"
-    run_as_user "$USER_CARL" bash -c "
-        echo 'Correction added by Carl.' >> $SHARED_DIR/Bob-file.txt
-        cat $SHARED_DIR/Bob-file.txt
-    "
-
-    # --- 4d. A file created AFTER the ACL was set must also be accessible
-    #         (this proves the default ACL works).
-    echo
-    echo "--- Alice creates a NEW file; Carl must be able to modify it"
-    run_as_user alice bash -c "
-        cd $SHARED_DIR
-        echo 'New file by Alice.' > Alice-new-file.txt
-    "
-    run_as_user "$USER_CARL" bash -c "
-        echo 'Correction added by Carl.' >> $SHARED_DIR/Alice-new-file.txt
-        cat $SHARED_DIR/Alice-new-file.txt
-    "
-
-    echo
-    echo "RESULT: carl could access and modify the files created by Alice and Bob."
-}
-
 # ---------------------------------------------------------------------
 # Main program
 # ---------------------------------------------------------------------
 set -e # stop the script if any command fails
+
+# Resolve this script's own directory so sourcing works from anywhere.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/common.sh"
+source "$SCRIPT_DIR/tests/ex02_tests.sh"
+
 require_root
 
 if [ "${1:-}" = "cleanup" ]; then
@@ -234,4 +147,4 @@ test_instructor_access
 
 print_title "Done"
 echo "To try it by hand:  su - $USER_CARL   (password: $PASSWORD_CARL)"
-echo "To remove it all:   sudo ./ex03.sh cleanup"
+echo "To remove it all:   sudo $0 cleanup"

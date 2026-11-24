@@ -4,7 +4,7 @@
 - See https://link.springer.com/content/pdf/10.1007/978-3-642-21793-7_40.pdf
 - `lab${x}` - uses the `guide${x-1}`
 
-## Attacks:
+## Attacks
 
 - man-in-the-middle (lab02)
 - arp-spoofing (lab04)
