@@ -1,9 +1,9 @@
 #!/bin/bash
 #
-# Usage (run ex02.sh first, it creates alice, bob and /home/IS-Lab):
-# - chmod +x ex03.sh
-# - sudo ./ex03.sh            -> creates everything and runs the tests
-# - sudo ./ex03.sh cleanup    -> removes everything this script created
+# Usage (run ex01.sh first, it creates alice, bob and /home/IS-Lab):
+# - chmod +x ex02.sh
+# - sudo ./ex02.sh            -> creates everything and runs the tests
+# - sudo ./ex02.sh cleanup    -> removes everything this script created
 #
 # Can Carl access and modify the files created by Alice and Bob?
 # Yes, through POSIX ACLs: IS-Instructor gets rwx on the directory, Carl NOT being a member of IS-Lab.
@@ -147,4 +147,4 @@ test_instructor_access
 
 print_title "Done"
 echo "To try it by hand:  su - $USER_CARL   (password: $PASSWORD_CARL)"
-echo "To remove it all:   sudo ./ex03.sh cleanup"
+echo "To remove it all:   sudo $0 cleanup"

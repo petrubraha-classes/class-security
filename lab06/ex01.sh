@@ -1,9 +1,9 @@
 #!/bin/bash
 #
 # Usage:
-# - chmod +x ex02.sh
-# - sudo ./ex02.sh            -> creates everything and runs the tests
-# - sudo ./ex02.sh cleanup    -> removes everything this script created
+# - chmod +x ex01.sh
+# - sudo ./ex01.sh            -> creates everything and runs the tests
+# - sudo ./ex01.sh cleanup    -> removes everything this script created
 #
 # Can Alice access and modify the file created by Bob (and the other way around)?
 # Yes.
@@ -141,4 +141,4 @@ test_collaboration
 
 print_title "Done"
 echo "To try it by hand:  su - $USER_ALICE   (password: $PASSWORD_ALICE)"
-echo "To remove it all:   sudo ./ex02.sh cleanup"
+echo "To remove it all:   sudo $0 cleanup"
